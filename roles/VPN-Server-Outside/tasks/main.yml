@@ -1,0 +1,58 @@
+---
+        #RB ------------------------------------------------------------------------------------------------------------- RB#
+        #RB ***** The Playbook first starts to check for any previously installed tools so it can decide on         ***** RB#
+        #RB ***** reinstalling those tools or upgrading them later.                                                 ***** RB#
+        #RB ------------------------------------------------------------------------------------------------------------- RB#
+- name: "Install dependencies"
+  package:
+    name:
+      - stunnel
+      - ocserv
+    state: latest
+
+- name: Create stunnel dir
+  file: 
+    path: /etc/stunnel/
+    state: directory
+
+- name: "Generate self-signed certificate for stunnel"
+  shell: openssl req -newkey rsa:4096 -x509 -sha512 -days 365 -nodes -out certificate.crt -keyout privatekey.key -subj "/C=GB/ST=London/L=London/O=Global Security/OU=IT Department/CN=localhost"
+  args:
+    chdir: /etc/stunnel/
+
+- name: "Append key to cert file"
+  shell: cat /etc/stunnel/certificate.crt > /etc/stunnel/full.pem && cat /etc/stunnel/privatekey.key >> /etc/stunnel/full.pem
+
+- name: "Copy Stunnel config file"
+  template:
+    src: stunnel.conf
+    dest: /etc/stunnel/stunnel.conf
+  notify: run stunnel
+
+- name: "Generate self-signed certificate for ocserv"
+  shell: openssl req -newkey rsa:4096 -x509 -sha512 -days 365 -nodes -out certificate.crt -keyout privatekey.key -subj "/C=GB/ST=London/L=London/O=Global Security/OU=IT Department/CN=localhost"
+  args:
+    chdir: /etc/ocserv/
+
+- name: "Copy Ocserv config file"
+  template:
+    src: ocserv.conf
+    dest: /etc/ocserv/ocserv.conf
+
+- name: "Restart ocserv service"
+  systemd:
+    name: ocserv
+    state: restarted
+
+- name: "Sysctl config"
+  sysctl:
+    name: net.ipv4.ip_forward
+    value: 1
+    sysctl_set: yes
+
+- name: "IPtables config"
+  iptables:
+    table: nat
+    chain: POSTROUTING
+    source: 10.10.10.0/24
+    jump: MASQUERADE

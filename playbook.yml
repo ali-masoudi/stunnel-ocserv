@@ -1,0 +1,20 @@
+---
+- name: Iran VPN Server Setup
+  hosts: vpn-server-iran
+  gather_facts: True
+  remote_user: root
+  become: yes
+  become_user: root
+  become_method: sudo
+  roles:
+          - VPN-Server-Iran
+
+- name: Outside VPN Server Setup
+  hosts: vpn-server-outside
+  gather_facts: True
+  remote_user: root
+  become: yes
+  become_user: root
+  become_method: sudo
+  roles:
+          - VPN-Server-Outside
